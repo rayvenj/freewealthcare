@@ -73,4 +73,41 @@ This guide focuses on practical ways to use Vercel for a marketing/landing page.
 - Analytics: Vercel Analytics + optional GA4
 - Monitoring: Speed Insights
 
+## 11) Fixing broken property routes (like `/properties/arbor-studio`)
+
+If a property URL loads the homepage content, shows blank content, or 404s, check routing first.
+
+### Common root causes
+
+- A catch-all rewrite sends every request to `/`.
+- Missing dynamic route/page for `/properties/[slug]`.
+- Static export generated only the homepage.
+- Client-side router works locally but no server-side fallback is configured in production.
+
+### Vercel checks
+
+1. In Vercel project settings, review `vercel.json` rewrites and redirects.
+2. Ensure there is no broad rewrite like `/(.*) -> /` unless you explicitly want a single-page fallback.
+3. Confirm your framework output includes property pages (or dynamic route support).
+4. Open deployment logs and request logs for `/properties/arbor-studio` to confirm which file/function handled the request.
+
+### Example `vercel.json` patterns
+
+Use a SPA fallback only if intended:
+
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+
+For multi-page/SSR apps, avoid forcing all routes to `/` and let framework routing handle dynamic pages.
+
+### Quick validation checklist
+
+- Test `https://www.moorehospitality.xyz/` and at least one property route directly in an incognito window.
+- Confirm route-specific title, heading, and canonical URL are unique per property.
+- Verify no redirect loop or unexpected 200-with-homepage response on property paths.
+- Re-run after a production redeploy and compare with the Vercel Preview URL.
+
 If you want, I can turn this into a concrete implementation checklist for your current codebase (including exact files and snippets).
