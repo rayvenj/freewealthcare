@@ -10,7 +10,7 @@ login, no tracking. Open it, budget, close it.
 
 | Principle | What it means in practice |
 | --- | --- |
-| **Secure** | No backend to breach. Strict Content Security Policy with `connect-src 'none'`: the app is technically unable to send your data anywhere. Every imported file is treated as hostile input. |
+| **Secure** | No backend to breach. The app makes no network requests, and a strict Content Security Policy blocks the usual ways code sends data out (fetch, XHR, WebSockets, beacons, form posts). It is defense in depth, not a guarantee: see [SECURITY.md](SECURITY.md). Every imported file is treated as hostile input. |
 | **Useful** | Zero-based budgeting: every dollar gets a job. Manual entry plus bank CSV import with duplicate protection. |
 | **Simple** | Four screens: Budget, Transactions, Accounts, Your data. Rules you can check with a pencil. |
 | **Powerful** | Exact integer-cent math, month-to-month rollover, full backup/restore. The engine is pure and tested, so new features build on solid ground. |

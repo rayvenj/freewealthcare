@@ -1,4 +1,4 @@
-import { addImported, loadBudget, openBudgetDb, putAccount, replaceAll, seedIfEmpty, setAssignment } from "./db";
+import { addImported, createAccount, loadBudget, openBudgetDb, putAccount, replaceAll, seedIfEmpty, setAssignment } from "./db";
 
 let dbCount = 0;
 const fresh = () => openBudgetDb(`test-${++dbCount}`);
@@ -11,6 +11,35 @@ describe("storage", () => {
     await seedIfEmpty(db);
     expect(first).toBeGreaterThan(0);
     expect((await loadBudget(db)).categories).toHaveLength(first);
+  });
+
+  it("seeds once even when two calls race", async () => {
+    const db = await fresh();
+    await Promise.all([seedIfEmpty(db), seedIfEmpty(db)]);
+    const names = (await loadBudget(db)).categories.map((c) => c.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("creates an account and its starting balance together, or neither", async () => {
+    const db = await fresh();
+    const opening = {
+      id: "t1", accountId: "a", date: "2026-10-01", payee: "Starting balance", memo: "",
+      amount: 500, categoryId: "income", opening: true as const,
+    };
+    await createAccount(db, { id: "a", name: "A", type: "checking", archived: false }, opening);
+    expect((await loadBudget(db)).transactions).toHaveLength(1);
+
+    // A transaction id that collides with nothing but a unique import key that does:
+    await createAccount(db, { id: "b", name: "B", type: "checking", archived: false }, {
+      ...opening, id: "t2", accountId: "b", importKey: "dup",
+    });
+    await expect(
+      createAccount(db, { id: "c", name: "C", type: "checking", archived: false }, {
+        ...opening, id: "t3", accountId: "c", importKey: "dup",
+      }),
+    ).rejects.toThrow();
+    const after = await loadBudget(db);
+    expect(after.accounts.map((a) => a.id).sort()).toEqual(["a", "b"]);
   });
 
   it("sets, overwrites and clears assignments", async () => {

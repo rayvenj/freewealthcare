@@ -41,6 +41,30 @@ describe("backup", () => {
     expect(parseBackup(toBackup(bad))).toMatchObject({ ok: false, error: expect.stringMatching(/missing account/) });
   });
 
+  it.each([
+    ["impossible date", (b: Budget) => (b.transactions[0]!.date = "2026-02-30"), /calendar date/],
+    ["month 13", (b: Budget) => (b.assignments[0]!.month = "2026-13"), /valid month/],
+    ["unknown transaction category", (b: Budget) => (b.transactions[0]!.categoryId = "ghost"), /missing category/],
+    ["unknown assignment category", (b: Budget) => (b.assignments[0]!.categoryId = "ghost"), /missing category/],
+    ["duplicate account id", (b: Budget) => b.accounts.push({ ...b.accounts[0]! }), /duplicate account/],
+    ["duplicate category id", (b: Budget) => b.categories.push({ ...b.categories[0]! }), /duplicate category/],
+    ["duplicate transaction id", (b: Budget) => b.transactions.push({ ...b.transactions[0]! }), /duplicate transaction/],
+    ["duplicate import key", (b: Budget) => (b.transactions[0]!.importKey = "k"), /duplicate import key/],
+    ["duplicate assignment", (b: Budget) => b.assignments.push({ ...b.assignments[0]! }), /more than one assignment/],
+    ["reserved income id", (b: Budget) => (b.categories[0]!.id = "income"), /reserved/],
+  ])("rejects %s", (_name, corrupt, message) => {
+    const bad = structuredClone(budget);
+    corrupt(bad);
+    expect(parseBackup(toBackup(bad))).toMatchObject({ ok: false, error: expect.stringMatching(message) });
+  });
+
+  it("keeps the starting-balance marker", () => {
+    const b = structuredClone(budget);
+    b.transactions[1]!.opening = true;
+    const result = parseBackup(toBackup(b));
+    expect(result.ok && result.budget.transactions[1]!.opening).toBe(true);
+  });
+
   it("drops unknown fields instead of storing them", () => {
     const raw = JSON.parse(toBackup(budget));
     raw.data.accounts[0].__proto__polluted = "x";

@@ -42,13 +42,21 @@ export function App() {
 
   const mutate = useCallback(
     async (write: (db: Db) => Promise<unknown>) => {
-      if (!db) return;
+      if (!db) return false;
+      let ok = true;
       try {
         await write(db);
       } catch (e) {
-        setError((e as Error).message);
+        ok = false;
+        setError(`Not saved: ${(e as Error).message}`);
       }
-      setBudget(await loadBudget(db));
+      try {
+        setBudget(await loadBudget(db));
+      } catch (e) {
+        setError(`Could not reload your budget: ${(e as Error).message}`);
+        return false;
+      }
+      return ok;
     },
     [db],
   );

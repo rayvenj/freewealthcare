@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { App } from "./App";
 
 describe("App", () => {
@@ -21,5 +21,26 @@ describe("App", () => {
     const link = await screen.findByRole("link", { name: "Universal WealthCare" });
     expect(link.getAttribute("href")).toBe("https://universalwealthcare.substack.com/");
     expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+  });
+
+  it("keeps transaction history visible after the last account is archived", async () => {
+    vi.stubGlobal("confirm", () => true);
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Accounts" }));
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Old Bank" } });
+    fireEvent.change(screen.getByLabelText("Current balance"), { target: { value: "75" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add account" }));
+    // Archive every active account (earlier tests share this browser database).
+    await screen.findByText("Old Bank");
+    for (let left = screen.queryAllByRole("button", { name: "Archive" }); left.length; ) {
+      const before = left.length;
+      fireEvent.click(left[0]!);
+      await waitFor(() => expect(screen.queryAllByRole("button", { name: "Archive" }).length).toBeLessThan(before));
+      left = screen.queryAllByRole("button", { name: "Archive" });
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "Transactions" }));
+    expect(await screen.findByText(/Add an account on the Accounts tab/)).toBeTruthy();
+    expect(screen.getAllByText("Starting balance").length).toBeGreaterThan(0);
   });
 });

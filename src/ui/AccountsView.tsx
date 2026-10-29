@@ -4,7 +4,7 @@ import { todayIso } from "../core/dates";
 import { formatCents, parseAmount } from "../core/money";
 import { newId } from "../core/id";
 import { INCOME, type AccountType } from "../core/types";
-import { putAccount, putTransaction } from "../storage/db";
+import { createAccount, putAccount } from "../storage/db";
 import { useStore } from "./store";
 
 const TYPES: { value: AccountType; label: string }[] = [
@@ -58,25 +58,30 @@ export function AccountsView() {
           if (balance === null) return setError("Enter the current balance like 1250.00 (negative for card debt).");
           setError(null);
           const id = newId();
-          void mutate(async (db) => {
-            await putAccount(db, { id, name: name.trim().slice(0, 100), type, archived: false });
-            if (balance !== 0) {
-              // A positive starting balance is money you have but haven't budgeted
-              // yet, so it lands in Ready to Assign. Starting debt is left
-              // uncategorized so it visibly reduces what you can assign.
-              await putTransaction(db, {
-                id: newId(),
-                accountId: id,
-                date: todayIso(),
-                payee: "Starting balance",
-                memo: "",
-                amount: balance,
-                categoryId: balance > 0 ? INCOME : null,
-              });
+          const openingTxn =
+            balance === 0
+              ? undefined
+              : {
+                  id: newId(),
+                  accountId: id,
+                  date: todayIso(),
+                  payee: "Starting balance",
+                  memo: "",
+                  amount: balance,
+                  // A positive starting balance is money you have but haven't budgeted
+                  // yet, so it lands in Ready to Assign. Starting debt is left
+                  // uncategorized so it visibly reduces what you can assign.
+                  categoryId: balance > 0 ? INCOME : null,
+                  opening: true as const,
+                };
+          void mutate((db) =>
+            createAccount(db, { id, name: name.trim().slice(0, 100), type, archived: false }, openingTxn),
+          ).then((ok) => {
+            if (ok) {
+              setName("");
+              setOpening("");
             }
           });
-          setName("");
-          setOpening("");
         }}
       >
         <h3>Add an account</h3>

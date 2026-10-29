@@ -8,20 +8,24 @@ import { addImported, deleteTransaction, putTransaction } from "../storage/db";
 import { useStore } from "./store";
 
 const MAX_CSV_BYTES = 5 * 1024 * 1024;
+const PAGE = 500;
 
 export function TransactionsView() {
   const { budget, mutate } = useStore();
   const accounts = budget.accounts.filter((a) => !a.archived);
   const categories = budget.categories.filter((c) => !c.archived);
   const accountName = new Map(budget.accounts.map((a) => [a.id, a.name]));
-  const sorted = useMemo(
-    () => [...budget.transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 500),
-    [budget.transactions],
+  const [onlyUncategorized, setOnlyUncategorized] = useState(false);
+  const [limit, setLimit] = useState(PAGE);
+  const matching = useMemo(
+    () =>
+      budget.transactions
+        .filter((t) => !onlyUncategorized || t.categoryId === null)
+        .sort((a, b) => b.date.localeCompare(a.date)),
+    [budget.transactions, onlyUncategorized],
   );
-
-  if (accounts.length === 0) {
-    return <p className="empty">Add an account on the Accounts tab before recording transactions.</p>;
-  }
+  const shown = matching.slice(0, limit);
+  const uncategorizedCount = budget.transactions.filter((t) => t.categoryId === null).length;
 
   const categorySelect = (value: string | null, onChange: (v: string | null) => void, label: string) => (
     <select aria-label={label} value={value ?? ""} onChange={(e) => onChange(e.target.value || null)}>
@@ -36,11 +40,31 @@ export function TransactionsView() {
   return (
     <section>
       <h2>Transactions</h2>
-      <AddTransaction accounts={accounts} categorySelect={categorySelect} />
-      <CsvImport accounts={accounts} />
+      {accounts.length === 0 ? (
+        <p className="empty">Add an account on the Accounts tab to record or import transactions.</p>
+      ) : (
+        <>
+          <AddTransaction accounts={accounts} categorySelect={categorySelect} />
+          <CsvImport accounts={accounts} />
+        </>
+      )}
 
-      {sorted.length === 0 ? (
-        <p className="empty">No transactions yet.</p>
+      {budget.transactions.length > 0 && (
+        <label className="filter">
+          <input
+            type="checkbox"
+            checked={onlyUncategorized}
+            onChange={(e) => {
+              setOnlyUncategorized(e.target.checked);
+              setLimit(PAGE);
+            }}
+          />{" "}
+          Only uncategorized ({uncategorizedCount})
+        </label>
+      )}
+
+      {shown.length === 0 ? (
+        <p className="empty">{onlyUncategorized ? "Everything has a category." : "No transactions yet."}</p>
       ) : (
         <div className="scroll">
         <table className="txns">
@@ -55,7 +79,7 @@ export function TransactionsView() {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((t) => (
+            {shown.map((t) => (
               <tr key={t.id}>
                 <td>{t.date}</td>
                 <td>{t.payee}{t.memo && <div className="muted">{t.memo}</div>}</td>
@@ -87,7 +111,14 @@ export function TransactionsView() {
         </table>
         </div>
       )}
-      {budget.transactions.length > 500 && <p className="muted">Showing the 500 most recent.</p>}
+      {matching.length > shown.length && (
+        <p className="muted">
+          Showing {shown.length} of {matching.length}.{" "}
+          <button className="link" onClick={() => setLimit((n) => n + PAGE)}>
+            Show {Math.min(PAGE, matching.length - shown.length)} more
+          </button>
+        </p>
+      )}
     </section>
   );
 }
@@ -115,7 +146,7 @@ function AddTransaction(props: { accounts: { id: string; name: string }[]; categ
         if (!payee.trim()) return setError("Enter who you paid or who paid you.");
         setError(null);
         const signed = direction === "out" ? -Math.abs(cents) : Math.abs(cents);
-        void mutate((db) =>
+        const saved = mutate((db) =>
           putTransaction(db, {
             id: newId(),
             accountId,
@@ -126,8 +157,12 @@ function AddTransaction(props: { accounts: { id: string; name: string }[]; categ
             categoryId: direction === "in" && categoryId === null ? INCOME : categoryId,
           }),
         );
-        setPayee("");
-        setAmount("");
+        void saved.then((ok) => {
+          if (ok) {
+            setPayee("");
+            setAmount("");
+          }
+        });
       }}
     >
       <h3>Add a transaction</h3>
@@ -169,12 +204,13 @@ function CsvImport(props: { accounts: { id: string; name: string }[] }) {
     }
     const { rows, errors } = importRows(body, map, accountId);
     let result = { added: 0, skipped: 0 };
-    await mutate(async (db) => {
+    const ok = await mutate(async (db) => {
       result = await addImported(
         db,
         rows.map((r) => ({ id: newId(), accountId, categoryId: null, ...r })),
       );
     });
+    if (!ok) return setStatus("Import failed. Nothing was saved.");
     setStatus(
       `Imported ${result.added}. Skipped ${result.skipped} already imported.` +
         (errors.length ? ` ${errors.length} row(s) unreadable (first: line ${errors[0]!.line}, ${errors[0]!.message}).` : ""),
@@ -195,7 +231,7 @@ function CsvImport(props: { accounts: { id: string; name: string }[] }) {
           aria-label="CSV file"
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) void onFile(f);
+            if (f) onFile(f).catch((err: Error) => setStatus(`Import failed: ${err.message}`));
             e.target.value = "";
           }}
         />

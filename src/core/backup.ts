@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { Budget } from "./types";
+import { isValidIsoDate } from "./dates";
+import { INCOME, type Budget, type Transaction } from "./types";
 
 // A backup file is untrusted input: it may have been edited, corrupted, or
 // handed to the user by someone else. Every field is validated and bounded
@@ -8,8 +9,8 @@ import type { Budget } from "./types";
 const id = z.string().min(1).max(64);
 const text = (max: number) => z.string().max(max);
 const cents = z.number().int().safe();
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const month = z.string().regex(/^\d{4}-\d{2}$/);
+const isoDate = z.string().refine(isValidIsoDate, "Not a real calendar date");
+const month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Not a valid month");
 
 const budgetSchema = z.object({
   accounts: z
@@ -36,6 +37,7 @@ const budgetSchema = z.object({
         amount: cents,
         categoryId: id.nullable(),
         importKey: text(400).optional(),
+        opening: z.literal(true).optional(),
       }),
     )
     .max(200_000),
@@ -78,16 +80,61 @@ export function parseBackup(json: string): ParseBackupResult {
     };
   }
   const data = parsed.data.data;
-  const accountIds = new Set(data.accounts.map((a) => a.id));
-  const orphan = data.transactions.find((t) => !accountIds.has(t.accountId));
-  if (orphan) return { ok: false, error: `Transaction ${orphan.id} points to a missing account.` };
+  const problem = findIntegrityProblem(data);
+  if (problem) return { ok: false, error: `Not a valid FreeWealthCare backup (${problem}).` };
   return {
     ok: true,
     budget: {
       ...data,
-      transactions: data.transactions.map(({ importKey, ...t }) =>
-        importKey === undefined ? t : { ...t, importKey },
-      ),
+      transactions: data.transactions.map(({ importKey, opening, ...t }) => {
+        const out: Transaction = { ...t };
+        if (importKey !== undefined) out.importKey = importKey;
+        if (opening) out.opening = true;
+        return out;
+      }),
     },
   };
+}
+
+/**
+ * Relationship checks the schema can't express. Each one protects the budget
+ * invariant or the database: an unknown category would move account balances
+ * without showing up in any budget row, and a duplicate key would silently
+ * overwrite a record (or fail the unique import index) during restore.
+ */
+function findIntegrityProblem(data: z.infer<typeof budgetSchema>): string | null {
+  const dupe = (values: string[]) => {
+    const seen = new Set<string>();
+    for (const v of values) {
+      if (seen.has(v)) return v;
+      seen.add(v);
+    }
+    return null;
+  };
+
+  const accountIds = new Set(data.accounts.map((a) => a.id));
+  const categoryIds = new Set(data.categories.map((c) => c.id));
+
+  let d = dupe(data.accounts.map((a) => a.id));
+  if (d) return `duplicate account id ${d}`;
+  d = dupe(data.categories.map((c) => c.id));
+  if (d) return `duplicate category id ${d}`;
+  if (categoryIds.has(INCOME)) return `"${INCOME}" is reserved and can't be a category id`;
+  d = dupe(data.transactions.map((t) => t.id));
+  if (d) return `duplicate transaction id ${d}`;
+  d = dupe(data.transactions.flatMap((t) => (t.importKey === undefined ? [] : [t.importKey])));
+  if (d) return `duplicate import key ${d}`;
+  d = dupe(data.assignments.map((a) => `${a.month} ${a.categoryId}`));
+  if (d) return `more than one assignment for ${d}`;
+
+  for (const t of data.transactions) {
+    if (!accountIds.has(t.accountId)) return `transaction ${t.id} points to a missing account`;
+    if (t.categoryId !== null && t.categoryId !== INCOME && !categoryIds.has(t.categoryId)) {
+      return `transaction ${t.id} points to a missing category`;
+    }
+  }
+  for (const a of data.assignments) {
+    if (!categoryIds.has(a.categoryId)) return `assignment for ${a.month} points to a missing category`;
+  }
+  return null;
 }

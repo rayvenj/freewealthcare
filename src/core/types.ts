@@ -39,6 +39,8 @@ export interface Transaction {
   categoryId: string | null;
   /** Stable fingerprint for imported rows, so re-importing a file is a no-op. */
   importKey?: string;
+  /** Marks an account's starting balance: money you already had, not new income. */
+  opening?: true;
 }
 
 /** Money given a job: `amount` assigned to `categoryId` in `month`. */

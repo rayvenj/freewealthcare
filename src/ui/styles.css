@@ -85,6 +85,7 @@ th[scope="row"] { font-weight: 500; }
 .pill.neg { background: var(--neg-bg); color: var(--neg); }
 .out { color: var(--neg); }
 .in { color: var(--pos); }
+.filter { display: inline-flex; align-items: center; gap: 6px; margin: 12px 0; font-size: 14px; }
 .muted { color: var(--muted); font-size: 13px; }
 .empty { color: var(--muted); padding: 24px 0; }
 .accounts { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
