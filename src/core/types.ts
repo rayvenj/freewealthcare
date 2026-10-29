@@ -21,7 +21,8 @@ export interface Category {
   archived: boolean;
   /**
    * Suggested share of each month's income to set aside here, in basis points
-   * (2500 = 25%). Used for things like quarterly estimated taxes.
+   * (2500 = 25%). Used for things like quarterly estimated taxes. 0 means the
+   * user switched it off, which templates must respect; undefined means never set.
    */
   setAsideRate?: number;
 }

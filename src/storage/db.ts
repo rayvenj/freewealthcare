@@ -1,6 +1,7 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Account, Assignment, Budget, Category, Transaction } from "../core/types";
 import { newId } from "../core/id";
+import { migrateTransaction } from "../core/migrate";
 
 // Everything lives in this browser's IndexedDB. There is no server, no account,
 // and no sync: the only way data leaves the device is an export the user makes.
@@ -19,15 +20,28 @@ interface FwcSchema extends DBSchema {
 export type Db = IDBPDatabase<FwcSchema>;
 
 export const DB_NAME = "freewealthcare";
+/** Bump when stored records need migrating; see core/migrate.ts. */
+export const DB_VERSION = 2;
 
 export function openBudgetDb(name = DB_NAME): Promise<Db> {
-  return openDB<FwcSchema>(name, 1, {
-    upgrade(db) {
-      db.createObjectStore("accounts", { keyPath: "id" });
-      db.createObjectStore("categories", { keyPath: "id" });
-      const tx = db.createObjectStore("transactions", { keyPath: "id" });
-      tx.createIndex("byImportKey", "importKey", { unique: true });
-      db.createObjectStore("assignments", { keyPath: ["month", "categoryId"] });
+  return openDB<FwcSchema>(name, DB_VERSION, {
+    async upgrade(db, oldVersion, _newVersion, tx) {
+      if (oldVersion < 1) {
+        db.createObjectStore("accounts", { keyPath: "id" });
+        db.createObjectStore("categories", { keyPath: "id" });
+        const store = db.createObjectStore("transactions", { keyPath: "id" });
+        store.createIndex("byImportKey", "importKey", { unique: true });
+        db.createObjectStore("assignments", { keyPath: ["month", "categoryId"] });
+      }
+      // Every upgrade re-runs the record migration; it is idempotent.
+      if (oldVersion >= 1) {
+        let cursor = await tx.objectStore("transactions").openCursor();
+        while (cursor) {
+          const next = migrateTransaction(cursor.value);
+          if (next !== cursor.value) await cursor.update(next);
+          cursor = await cursor.continue();
+        }
+      }
     },
   });
 }

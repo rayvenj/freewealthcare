@@ -76,10 +76,7 @@ export function BudgetView() {
                           mutate((db) => setAssignment(db, { month, categoryId: c.id, amount }))
                         }
                         onRate={(rate) => {
-                          const next = { ...c };
-                          if (rate) next.setAsideRate = rate;
-                          else delete next.setAsideRate;
-                          void mutate((db) => putCategory(db, next));
+                          void mutate((db) => putCategory(db, { ...c, setAsideRate: rate }));
                         }}
                       />
                     )}
@@ -199,7 +196,8 @@ function SetAside(props: {
   income: number;
   assigned: number;
   onAssign: (cents: number) => void;
-  onRate: (rateBps: number | undefined) => void;
+  /** 0 records an explicit "off", so a template can't quietly switch it back on. */
+  onRate: (rateBps: number) => void;
 }) {
   const rate = props.category.setAsideRate ?? 0;
   const suggested = setAsideAmount(props.income, rate);
@@ -214,7 +212,7 @@ function SetAside(props: {
           e.preventDefault();
           const pct = Number(text);
           if (!Number.isFinite(pct) || pct < 0 || pct * 100 > MAX_SET_ASIDE_RATE) return;
-          props.onRate(Math.round(pct * 100) || undefined);
+          props.onRate(Math.round(pct * 100));
           setEditing(false);
         }}
       >
@@ -228,6 +226,17 @@ function SetAside(props: {
         % <button type="submit" className="link">Save</button>
         <span className="muted"> (0 turns it off)</span>
       </form>
+    );
+  }
+
+  if (rate === 0) {
+    return (
+      <div className="set-aside">
+        <span className="muted">Set-aside off</span>
+        <button className="link" aria-label={`Change set-aside percent for ${props.category.name}`} onClick={() => setEditing(true)}>
+          Change
+        </button>
+      </div>
     );
   }
 

@@ -87,6 +87,12 @@ describe("planTemplate", () => {
     expect(plan.toPut).toEqual([]);
   });
 
+  it("respects a set-aside the user switched off", () => {
+    const existing = [cat("Taxes", "Quarterly", { setAsideRate: 0 })];
+    const plan = planTemplate(existing, template([{ group: "Taxes", name: "Quarterly", setAsideRate: 2500 }]), ids);
+    expect(plan.toPut).toEqual([]);
+  });
+
   it("adds a rate to an existing category that has none", () => {
     const plan = planTemplate([cat("Taxes", "Quarterly")], template([{ group: "Taxes", name: "Quarterly", setAsideRate: 2500 }]), ids);
     expect(plan.updated).toEqual(["Quarterly"]);

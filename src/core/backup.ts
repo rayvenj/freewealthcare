@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isValidIsoDate } from "./dates";
+import { migrateTransaction } from "./migrate";
 import { MAX_SET_ASIDE_RATE } from "./templates";
 import { INCOME, type Budget, type Category, type Transaction } from "./types";
 
@@ -31,7 +32,8 @@ const budgetSchema = z.object({
         name: text(100),
         group: text(100),
         archived: z.boolean(),
-        setAsideRate: z.number().int().min(1).max(MAX_SET_ASIDE_RATE).optional(),
+        // 0 means the user turned the set-aside off; templates must not re-enable it.
+        setAsideRate: z.number().int().min(0).max(MAX_SET_ASIDE_RATE).optional(),
       }),
     )
     .max(1000),
@@ -104,7 +106,7 @@ export function parseBackup(json: string): ParseBackupResult {
         const out: Transaction = { ...t };
         if (importKey !== undefined) out.importKey = importKey;
         if (opening) out.opening = true;
-        return out;
+        return migrateTransaction(out);
       }),
     },
   };

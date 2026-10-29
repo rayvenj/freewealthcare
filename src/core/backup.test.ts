@@ -67,6 +67,20 @@ describe("backup", () => {
     expect(parseBackup(toBackup(b))).toMatchObject({ ok: false });
   });
 
+  it("marks v0.1 starting balances so they aren't treated as new income", () => {
+    const b = structuredClone(budget);
+    b.transactions.push({ id: "t3", accountId: "a1", date: "2026-10-01", payee: "Starting balance", memo: "", amount: 900000, categoryId: "income" });
+    const result = parseBackup(toBackup(b));
+    expect(result.ok && result.budget.transactions.find((t) => t.id === "t3")!.opening).toBe(true);
+  });
+
+  it("keeps an explicit set-aside opt-out (0)", () => {
+    const b = structuredClone(budget);
+    b.categories[0]!.setAsideRate = 0;
+    const result = parseBackup(toBackup(b));
+    expect(result.ok && result.budget.categories[0]!.setAsideRate).toBe(0);
+  });
+
   it("keeps the starting-balance marker", () => {
     const b = structuredClone(budget);
     b.transactions[1]!.opening = true;
