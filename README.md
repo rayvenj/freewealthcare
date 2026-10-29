@@ -55,6 +55,11 @@ docs/        Roadmap and the public build log
 `core/` has no React and no browser storage. That is deliberate: the rules of
 your money live in plain functions that are easy to read, test and audit.
 
+## Deploy
+
+Hosted on Cloudflare Pages as a static site. Settings, security headers and
+verification steps are in [`docs/deploy.md`](docs/deploy.md).
+
 ## Build log
 
 We are building this in public. Long-form write-ups, plus personal finance and

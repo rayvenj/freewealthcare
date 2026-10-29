@@ -22,10 +22,11 @@ network calls after the page loads.
   roadmap.
 - **Backups are plain JSON.** Treat a backup file like a bank statement.
 - **Clearing browser data deletes the budget.** Export backups regularly.
-- **CSP is delivered as a `<meta>` tag**, which cannot set `frame-ancestors`.
-  When a host is chosen, send the same policy as an HTTP header and add
-  `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`, and
-  `Strict-Transport-Security`.
+- **Security headers depend on the host.** On Cloudflare Pages the build emits
+  `dist/_headers`, generated from the same CSP as the `<meta>` tag, adding
+  `frame-ancestors 'none'`, `X-Frame-Options`, `nosniff`, HSTS and a
+  restrictive `Permissions-Policy`. Hosting anywhere else falls back to the
+  `<meta>` CSP alone, which cannot block framing. See `docs/deploy.md`.
 
 ## Reporting a vulnerability
 
