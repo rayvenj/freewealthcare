@@ -3,6 +3,7 @@ import { summarizeMonth } from "../core/budget";
 import { addMonths, formatMonth, monthOf, todayIso } from "../core/dates";
 import { formatCents, parseAmount } from "../core/money";
 import { newId } from "../core/id";
+import { formatRate, incomeForSetAside, MAX_SET_ASIDE_RATE, setAsideAmount } from "../core/templates";
 import { DEFAULT_CATEGORIES, putCategory, setAssignment } from "../storage/db";
 import type { Category } from "../core/types";
 import { useStore } from "./store";
@@ -19,6 +20,7 @@ export function BudgetView() {
   }
 
   const rta = summary.readyToAssign;
+  const setAsideIncome = useMemo(() => incomeForSetAside(budget, month), [budget, month]);
 
   return (
     <section>
@@ -63,7 +65,22 @@ export function BudgetView() {
               const row = byId.get(c.id);
               return (
                 <tr key={c.id}>
-                  <th scope="row">{c.name}</th>
+                  <th scope="row">
+                    {c.name}
+                    {c.setAsideRate !== undefined && (
+                      <SetAside
+                        category={c}
+                        income={setAsideIncome}
+                        assigned={row?.assigned ?? 0}
+                        onAssign={(amount) =>
+                          mutate((db) => setAssignment(db, { month, categoryId: c.id, amount }))
+                        }
+                        onRate={(rate) => {
+                          void mutate((db) => putCategory(db, { ...c, setAsideRate: rate }));
+                        }}
+                      />
+                    )}
+                  </th>
                   <td className="num">
                     <AssignInput
                       key={`${c.id}-${month}-${row?.assigned ?? 0}`}
@@ -148,17 +165,96 @@ function AddCategory(props: { groups: string[]; onAdd: (name: string, group: str
 const STARTER_GROUPS = DEFAULT_CATEGORIES.map(([g]) => g);
 const STARTER_NAMES = DEFAULT_CATEGORIES.flatMap(([, names]) => names);
 
-/** Starter groups and categories keep their intended order; anything the user adds sorts after, A to Z. */
+/**
+ * Groups holding a set-aside (like quarterly taxes) come first: that money has
+ * to be put away before anything else. Then starter groups and categories in
+ * their intended order, then anything the user added, A to Z.
+ */
 function sortCategories(categories: Category[]): Category[] {
   const rank = (list: string[], v: string) => {
     const i = list.indexOf(v);
     return i === -1 ? list.length : i;
   };
+  const setAsideGroups = new Set(categories.filter((c) => c.setAsideRate).map((c) => c.group));
+  const first = (c: Category) => (setAsideGroups.has(c.group) ? 0 : 1);
   return [...categories].sort(
     (a, b) =>
+      first(a) - first(b) ||
       rank(STARTER_GROUPS, a.group) - rank(STARTER_GROUPS, b.group) ||
       a.group.localeCompare(b.group) ||
       rank(STARTER_NAMES, a.name) - rank(STARTER_NAMES, b.name) ||
       a.name.localeCompare(b.name),
+  );
+}
+
+/**
+ * "Set aside 25% of income" prompt for categories like quarterly taxes. It only
+ * suggests: nothing is assigned until the user presses the button.
+ */
+function SetAside(props: {
+  category: Category;
+  income: number;
+  assigned: number;
+  onAssign: (cents: number) => void;
+  /** 0 records an explicit "off", so a template can't quietly switch it back on. */
+  onRate: (rateBps: number) => void;
+}) {
+  const rate = props.category.setAsideRate ?? 0;
+  const suggested = setAsideAmount(props.income, rate);
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(String(rate / 100));
+
+  if (editing) {
+    return (
+      <form
+        className="set-aside"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const pct = Number(text);
+          if (!Number.isFinite(pct) || pct < 0 || pct * 100 > MAX_SET_ASIDE_RATE) return;
+          props.onRate(Math.round(pct * 100));
+          setEditing(false);
+        }}
+      >
+        <input
+          className="rate"
+          inputMode="decimal"
+          aria-label={`Set-aside percent for ${props.category.name}`}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+        % <button type="submit" className="link">Save</button>
+        <span className="muted"> (0 turns it off)</span>
+      </form>
+    );
+  }
+
+  if (rate === 0) {
+    return (
+      <div className="set-aside">
+        <span className="muted">Set-aside off</span>
+        <button className="link" aria-label={`Change set-aside percent for ${props.category.name}`} onClick={() => setEditing(true)}>
+          Change
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="set-aside">
+      <span className="muted">
+        Set aside {formatRate(rate)} of income
+        {props.income > 0 && <> = {formatCents(suggested)}</>}
+      </span>
+      {props.income > 0 && props.assigned < suggested && (
+        <button className="link" onClick={() => props.onAssign(suggested)}>
+          Assign {formatCents(suggested)}
+        </button>
+      )}
+      {props.income > 0 && props.assigned >= suggested && <span className="covered">Covered</span>}
+      <button className="link" aria-label={`Change set-aside percent for ${props.category.name}`} onClick={() => setEditing(true)}>
+        Change
+      </button>
+    </div>
   );
 }

@@ -75,6 +75,20 @@ describe("importRows", () => {
     expect(rows.map((r) => r.amount)).toEqual([-2000, -2000, 500]);
   });
 
+  it("rejects a row when a populated debit or credit cell is unreadable", () => {
+    const { rows, errors } = importRows(
+      [
+        ["2026-10-01", "Bad debit", "not money", "5.00"],
+        ["2026-10-01", "Bad credit", "", "n/a"],
+        ["2026-10-01", "Both blank", "", ""],
+      ],
+      { date: 0, payee: 1, debit: 2, credit: 3 },
+      "chk",
+    );
+    expect(rows).toEqual([]);
+    expect(errors.map((e) => e.line)).toEqual([2, 3, 4]);
+  });
+
   it("keeps identical same-day rows distinct and keys them deterministically", () => {
     const records = [
       ["2026-10-01", "Coffee", "-3.00"],

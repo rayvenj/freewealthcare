@@ -112,10 +112,15 @@ export function importRows(records: string[][], map: ColumnMap, accountId: strin
     if (map.amount !== undefined) {
       amount = parseAmount(r[map.amount] ?? "");
     } else {
-      const out = parseAmount(r[map.debit!] ?? "") ?? 0;
-      const inn = parseAmount(r[map.credit!] ?? "") ?? 0;
-      amount = inn - Math.abs(out);
-      if (out === 0 && inn === 0) amount = null;
+      // A blank cell means zero; anything else must parse. Treating garbage as
+      // zero would import the other column alone and silently misstate the row.
+      const cell = (i: number) => {
+        const raw = (r[i] ?? "").trim();
+        return raw === "" ? 0 : parseAmount(raw);
+      };
+      const out = cell(map.debit!);
+      const inn = cell(map.credit!);
+      amount = out === null || inn === null || (out === 0 && inn === 0) ? null : inn - Math.abs(out);
     }
     if (amount === null) return errors.push({ line, message: "Missing or unreadable amount" });
 

@@ -3,6 +3,7 @@ import { parseBackup, toBackup } from "../core/backup";
 import { todayIso } from "../core/dates";
 import { replaceAll } from "../storage/db";
 import { useStore } from "./store";
+import { TemplatesCard } from "./TemplatesCard";
 
 const MAX_BACKUP_BYTES = 50 * 1024 * 1024;
 
@@ -26,13 +27,17 @@ export function DataView() {
     const result = parseBackup(await file.text());
     if (!result.ok) return setStatus(result.error);
     if (!confirm("Restoring replaces everything currently in this browser. Continue?")) return;
-    await mutate((db) => replaceAll(db, result.budget));
-    setStatus(`Restored ${result.budget.transactions.length} transactions.`);
+    const ok = await mutate((db) => replaceAll(db, result.budget));
+    setStatus(
+      ok
+        ? `Restored ${result.budget.transactions.length} transactions.`
+        : "Restore failed. Your existing budget was left unchanged.",
+    );
   }
 
   return (
     <section>
-      <h2>Your data</h2>
+      <h2>Templates &amp; data</h2>
       <div className="card">
         <h3>Where your data lives</h3>
         <p>
@@ -41,6 +46,7 @@ export function DataView() {
           regularly.
         </p>
       </div>
+      <TemplatesCard />
       <div className="card">
         <h3>Back up</h3>
         <button className="primary" onClick={exportBackup}>Download backup</button>
@@ -53,7 +59,7 @@ export function DataView() {
           aria-label="Backup file"
           onChange={(e) => {
             const f = e.target.files?.[0];
-            if (f) void restore(f);
+            if (f) restore(f).catch((err: Error) => setStatus(`Restore failed: ${err.message}`));
             e.target.value = "";
           }}
         />
@@ -63,8 +69,9 @@ export function DataView() {
         <button
           onClick={() => {
             if (confirm("Permanently erase all accounts, transactions and budgets from this browser?")) {
-              void mutate((db) => replaceAll(db, { accounts: [], categories: [], transactions: [], assignments: [] }));
-              setStatus("All data erased.");
+              void mutate((db) =>
+                replaceAll(db, { accounts: [], categories: [], transactions: [], assignments: [] }),
+              ).then((ok) => setStatus(ok ? "All data erased." : "Erase failed. Your data is unchanged."));
             }
           }}
         >

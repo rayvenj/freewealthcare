@@ -1,0 +1,26 @@
+{
+  "format": "freewealthcare-template",
+  "version": 1,
+  "id": "1099-contractor",
+  "name": "1099 Contractor Starter",
+  "description": "For freelancers and independent contractors whose clients don't withhold tax. Adds business and tax categories and suggests setting aside 25% of each month's income for quarterly estimated taxes (federal due dates are generally Apr 15, Jun 15, Sep 15 and Jan 15). 25% is a starting point, not tax advice: your rate depends on your income, deductions and state, so adjust it on the Budget screen.",
+  "author": "Rayven J. Moore, CPA",
+  "source": "https://universalwealthcare.substack.com/",
+  "categories": [
+    { "group": "Taxes", "name": "Quarterly Estimated Taxes", "setAsideRate": 2500 },
+    { "group": "Business", "name": "Software & Subscriptions" },
+    { "group": "Business", "name": "Equipment" },
+    { "group": "Business", "name": "Business Insurance" },
+    { "group": "Business", "name": "Professional Development" },
+    { "group": "Bills", "name": "Rent / Mortgage" },
+    { "group": "Bills", "name": "Utilities" },
+    { "group": "Bills", "name": "Phone & Internet" },
+    { "group": "Bills", "name": "Health Insurance" },
+    { "group": "Everyday", "name": "Groceries" },
+    { "group": "Everyday", "name": "Transportation" },
+    { "group": "Everyday", "name": "Household" },
+    { "group": "Goals", "name": "Income Smoothing Buffer" },
+    { "group": "Goals", "name": "Emergency Fund" },
+    { "group": "Goals", "name": "Retirement (SEP-IRA / Solo 401k)" }
+  ]
+}

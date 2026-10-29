@@ -9,7 +9,7 @@ network calls after the page loads.
 | Threat | Mitigation |
 | --- | --- |
 | Server breach leaks users' finances | There is no server holding user data. |
-| Injected script exfiltrates data (XSS, compromised dependency) | Production CSP sets `connect-src 'none'`, `form-action 'none'`, `script-src 'self'`. React escapes all rendered text; `dangerouslySetInnerHTML`, `eval` and implied eval are lint errors. |
+| Injected script exfiltrates data (XSS, compromised dependency) | First line: keep hostile script from ever running. Only same-origin scripts may load (`script-src 'self'`), React escapes all rendered text, and `dangerouslySetInnerHTML`, `eval` and implied eval are lint errors. Second line: CSP sets `connect-src 'none'` and `form-action 'none'`, blocking fetch, XHR, WebSockets, beacons and form posts. **This does not stop every channel.** Script already running in the page could still read local data and navigate the whole page to an outside URL, which CSP cannot block. Hence the emphasis on preventing script injection and keeping dependencies few. |
 | Malicious backup or CSV file | Backups are schema-validated with Zod (types, lengths, integer cents, referential integrity) before anything is written. Unknown fields are dropped. CSV and backup imports have size and row caps. |
 | Restore half-applies and corrupts data | Restore runs in a single IndexedDB transaction: all or nothing. |
 | Money math errors | All amounts are integer cents. A test enforces the budget balancing invariant. |

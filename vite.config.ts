@@ -3,9 +3,12 @@ import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
 // Production builds ship a strict Content Security Policy. The app makes no
-// network requests at all, so connect-src is 'none': even an injected script
-// would have nowhere to send your data. Dev is exempt because Vite's HMR needs
-// a websocket and inline scripts.
+// network requests at all, so connect-src is 'none', which blocks fetch, XHR,
+// WebSockets and beacons. This is defense in depth, not a guarantee: CSP
+// cannot block top-level navigation, so script that somehow ran in the page
+// could still leak data that way. The primary control is script-src 'self'
+// plus a ban on raw HTML and eval. Dev is exempt because Vite's HMR needs a
+// websocket and inline scripts.
 const CSP = [
   "default-src 'self'",
   "script-src 'self'",

@@ -1,6 +1,6 @@
 import { sum, type Cents } from "./money";
 import { addMonths, monthOf } from "./dates";
-import { INCOME, type Budget, type Month } from "./types";
+import { INCOME, TRANSFER, type Budget, type Month } from "./types";
 
 export interface CategoryMonth {
   categoryId: string;
@@ -36,6 +36,9 @@ export interface MonthSummary {
  *  - Ready to Assign is cumulative: total income to date minus total assigned
  *    to date. Future-month assignments count against it, so you cannot assign
  *    the same dollar twice.
+ *  - Transfers between accounts (including paying a credit card) are ignored.
+ *    Card purchases are categorized like cash, so the budget counts them when
+ *    they happen; paying the card later just settles what you owe.
  */
 export function summarizeMonth(budget: Budget, month: Month): MonthSummary {
   const categoryIds = budget.categories.map((c) => c.id);
@@ -46,6 +49,9 @@ export function summarizeMonth(budget: Budget, month: Month): MonthSummary {
   let uncategorized = 0;
 
   for (const t of budget.transactions) {
+    // Transfers (including card payments) move money between your own accounts:
+    // never income, never spending.
+    if (t.categoryId === TRANSFER) continue;
     const tm = monthOf(t.date);
     if (t.categoryId === INCOME) {
       if (tm <= month) incomeToDate += t.amount;

@@ -11,7 +11,7 @@ import { DataView } from "./DataView";
 // from making network requests, and that promise matters more than conversion.
 export const NEWSLETTER_URL = "https://universalwealthcare.substack.com/";
 
-const TABS = ["Budget", "Transactions", "Accounts", "Your data"] as const;
+const TABS = ["Budget", "Transactions", "Accounts", "Templates & data"] as const;
 type Tab = (typeof TABS)[number];
 
 export function App() {
@@ -42,13 +42,21 @@ export function App() {
 
   const mutate = useCallback(
     async (write: (db: Db) => Promise<unknown>) => {
-      if (!db) return;
+      if (!db) return false;
+      let ok = true;
       try {
         await write(db);
       } catch (e) {
-        setError((e as Error).message);
+        ok = false;
+        setError(`Not saved: ${(e as Error).message}`);
       }
-      setBudget(await loadBudget(db));
+      try {
+        setBudget(await loadBudget(db));
+      } catch (e) {
+        setError(`Could not reload your budget: ${(e as Error).message}`);
+        return false;
+      }
+      return ok;
     },
     [db],
   );
@@ -84,7 +92,7 @@ export function App() {
         {tab === "Budget" && <BudgetView />}
         {tab === "Transactions" && <TransactionsView />}
         {tab === "Accounts" && <AccountsView />}
-        {tab === "Your data" && <DataView />}
+        {tab === "Templates & data" && <DataView />}
       </main>
       <footer className="shell footer">
         <p>Your data is stored only in this browser. Nothing is sent anywhere.</p>

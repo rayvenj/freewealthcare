@@ -41,6 +41,69 @@ describe("backup", () => {
     expect(parseBackup(toBackup(bad))).toMatchObject({ ok: false, error: expect.stringMatching(/missing account/) });
   });
 
+  it.each([
+    ["impossible date", (b: Budget) => (b.transactions[0]!.date = "2026-02-30"), /calendar date/],
+    ["month 13", (b: Budget) => (b.assignments[0]!.month = "2026-13"), /valid month/],
+    ["unknown transaction category", (b: Budget) => (b.transactions[0]!.categoryId = "ghost"), /missing category/],
+    ["unknown assignment category", (b: Budget) => (b.assignments[0]!.categoryId = "ghost"), /missing category/],
+    ["duplicate account id", (b: Budget) => b.accounts.push({ ...b.accounts[0]! }), /duplicate account/],
+    ["duplicate category id", (b: Budget) => b.categories.push({ ...b.categories[0]! }), /duplicate category/],
+    ["duplicate transaction id", (b: Budget) => b.transactions.push({ ...b.transactions[0]! }), /duplicate transaction/],
+    ["duplicate import key", (b: Budget) => (b.transactions[0]!.importKey = "k"), /duplicate import key/],
+    ["duplicate assignment", (b: Budget) => b.assignments.push({ ...b.assignments[0]! }), /more than one assignment/],
+    ["reserved income id", (b: Budget) => (b.categories[0]!.id = "income"), /reserved/],
+    ["reserved transfer id", (b: Budget) => (b.categories[0]!.id = "transfer"), /reserved/],
+    [
+      "half a transfer",
+      (b: Budget) => b.transactions.push({ id: "t9", accountId: "a1", date: "2026-10-03", payee: "x", memo: "", amount: -5, categoryId: "transfer", transferId: "nope" }),
+      /missing transaction/,
+    ],
+  ])("rejects %s", (_name, corrupt, message) => {
+    const bad = structuredClone(budget);
+    corrupt(bad);
+    expect(parseBackup(toBackup(bad))).toMatchObject({ ok: false, error: expect.stringMatching(message) });
+  });
+
+  it("keeps set-aside rates and rejects out-of-range ones", () => {
+    const b = structuredClone(budget);
+    b.categories[0]!.setAsideRate = 2500;
+    const result = parseBackup(toBackup(b));
+    expect(result.ok && result.budget.categories[0]!.setAsideRate).toBe(2500);
+    b.categories[0]!.setAsideRate = 10_000;
+    expect(parseBackup(toBackup(b))).toMatchObject({ ok: false });
+  });
+
+  it("marks v0.1 starting balances so they aren't treated as new income", () => {
+    const b = structuredClone(budget);
+    b.transactions.push({ id: "t3", accountId: "a1", date: "2026-10-01", payee: "Starting balance", memo: "", amount: 900000, categoryId: "income" });
+    const result = parseBackup(toBackup(b));
+    expect(result.ok && result.budget.transactions.find((t) => t.id === "t3")!.opening).toBe(true);
+  });
+
+  it("keeps an explicit set-aside opt-out (0)", () => {
+    const b = structuredClone(budget);
+    b.categories[0]!.setAsideRate = 0;
+    const result = parseBackup(toBackup(b));
+    expect(result.ok && result.budget.categories[0]!.setAsideRate).toBe(0);
+  });
+
+  it("round-trips a transfer", () => {
+    const b = structuredClone(budget);
+    b.accounts.push({ id: "a2", name: "Visa", type: "credit", archived: false });
+    b.transactions.push(
+      { id: "x1", accountId: "a1", date: "2026-10-05", payee: "Pay Visa", memo: "", amount: -500, categoryId: "transfer", transferId: "x2" },
+      { id: "x2", accountId: "a2", date: "2026-10-05", payee: "Pay Visa", memo: "", amount: 500, categoryId: "transfer", transferId: "x1", generated: true },
+    );
+    expect(parseBackup(toBackup(b))).toEqual({ ok: true, budget: b });
+  });
+
+  it("keeps the starting-balance marker", () => {
+    const b = structuredClone(budget);
+    b.transactions[1]!.opening = true;
+    const result = parseBackup(toBackup(b));
+    expect(result.ok && result.budget.transactions[1]!.opening).toBe(true);
+  });
+
   it("drops unknown fields instead of storing them", () => {
     const raw = JSON.parse(toBackup(budget));
     raw.data.accounts[0].__proto__polluted = "x";

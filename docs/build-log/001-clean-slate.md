@@ -31,9 +31,22 @@ each month. We keep them visible until you cover them, so the numbers always
 reconcile to your actual cash.
 
 **Strict CSP with `connect-src 'none'`.** Even if a dependency were
-compromised, the page has no permission to send data anywhere.
+compromised, the page has no permission to send data anywhere. *(Overstated.
+See the correction below.)*
 
 ## Next up
 
 Transfers and credit cards. Today a credit card payment from checking looks
 like spending, which is wrong. Fixing that is the top item for v0.2.
+
+## Correction (2026-10-29)
+
+Automated review of the v0.1 pull request caught an overstatement above.
+`connect-src 'none'` blocks fetch, XHR, WebSockets and beacons, but CSP cannot
+block a script from navigating the whole page to an outside address with data
+in the URL. So the honest claim is: the app never sends your data, and the
+security policy blocks the common ways code could. It is not an absolute
+guarantee if hostile code ever ran in the page. The real first line of
+defense is never letting that code run: only our own scripts load, raw HTML
+and `eval` are banned, and dependencies are kept few. SECURITY.md now says
+this plainly.

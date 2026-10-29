@@ -10,8 +10,8 @@ login, no tracking. Open it, budget, close it.
 
 | Principle | What it means in practice |
 | --- | --- |
-| **Secure** | No backend to breach. Strict Content Security Policy with `connect-src 'none'`: the app is technically unable to send your data anywhere. Every imported file is treated as hostile input. |
-| **Useful** | Zero-based budgeting: every dollar gets a job. Manual entry plus bank CSV import with duplicate protection. |
+| **Secure** | No backend to breach. The app makes no network requests, and a strict Content Security Policy blocks the usual ways code sends data out (fetch, XHR, WebSockets, beacons, form posts). It is defense in depth, not a guarantee: see [SECURITY.md](SECURITY.md). Every imported file is treated as hostile input. |
+| **Useful** | Zero-based budgeting: every dollar gets a job. Manual entry plus bank CSV import with duplicate protection. Start from a [template](docs/templates.md), like the 1099 Contractor Starter with a built-in tax set-aside. |
 | **Simple** | Four screens: Budget, Transactions, Accounts, Your data. Rules you can check with a pencil. |
 | **Powerful** | Exact integer-cent math, month-to-month rollover, full backup/restore. The engine is pure and tested, so new features build on solid ground. |
 
@@ -21,7 +21,9 @@ login, no tracking. Open it, budget, close it.
 2. **Assign** that money to categories for the month. Ready to Assign goes down.
 3. **Spend** from categories. A category's **Available** goes down.
 4. Whatever is left in a category **rolls into next month**. Overspending rolls too: it is never silently forgiven.
-5. The books always balance: `Ready to Assign + sum of every category's Available = total cash across accounts`. There is a test that enforces this.
+5. **Transfers** between your accounts (moving money to savings, paying a credit card) are not income or spending. They change account balances, never the budget.
+6. **Credit cards** work like cash. Pick a category when you buy something on the card and that category pays for it. Paying the card later is a transfer. Debt you already owed when you added the card comes out of Ready to Assign.
+7. The books always balance: `Ready to Assign + sum of every category's Available = net worth` (cash minus card debt). There is a test that enforces this.
 
 ## Getting started
 
@@ -43,7 +45,8 @@ npm run dev      # http://localhost:5173
 
 ```
 src/
-  core/      Pure budgeting logic: money, dates, budget engine, CSV import, backup validation
+  core/      Pure budgeting logic: money, dates, budget engine, CSV import, backup and template validation
+  templates/ Built-in budget templates (JSON)
   storage/   IndexedDB persistence (on-device only)
   ui/        React screens
 docs/        Roadmap and the public build log
