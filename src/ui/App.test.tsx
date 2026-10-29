@@ -77,3 +77,39 @@ describe("templates", () => {
     expect((screen.getByLabelText("Assigned to Quarterly Estimated Taxes") as HTMLInputElement).value).toBe("1000.00");
   });
 });
+
+describe("credit cards", () => {
+  it("tracks what you owe and pays the card without touching the budget", async () => {
+    vi.stubGlobal("confirm", () => true);
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Accounts" }));
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Card Checking" } });
+    fireEvent.change(screen.getByLabelText("Current balance"), { target: { value: "2000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add account" }));
+    await screen.findByText("Card Checking");
+
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Visa" } });
+    fireEvent.change(screen.getByLabelText("Type"), { target: { value: "credit" } });
+    fireEvent.change(screen.getByLabelText("Amount owed"), { target: { value: "500" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add account" }));
+    expect(await screen.findByText("Owed $500.00")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Budget" }));
+    const rtaBefore = (await screen.findByText("Ready to assign")).parentElement!.textContent;
+
+    fireEvent.click(screen.getByRole("button", { name: "Accounts" }));
+    fireEvent.change(await screen.findByLabelText("Pay Visa from"), {
+      target: { value: screen.getByRole("option", { name: "Card Checking" }).getAttribute("value") },
+    });
+    fireEvent.change(screen.getByLabelText("Payment amount for Visa"), { target: { value: "200" } });
+    fireEvent.click(screen.getByRole("button", { name: "Pay card" }));
+    expect(await screen.findByText("Owed $300.00")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Budget" }));
+    expect((await screen.findByText("Ready to assign")).parentElement!.textContent).toBe(rtaBefore);
+
+    fireEvent.click(screen.getByRole("button", { name: "Transactions" }));
+    expect((await screen.findAllByText("Card Checking → Visa")).length).toBe(2);
+  });
+});

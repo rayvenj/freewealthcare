@@ -1,4 +1,4 @@
-import type { Transaction } from "./types";
+import { INCOME, type Transaction } from "./types";
 
 /**
  * Brings records written by older versions up to the current shape. Pure, and
@@ -8,9 +8,17 @@ import type { Transaction } from "./types";
  * payee "Starting balance" and no marker. Later versions flag it `opening` so
  * it isn't mistaken for new income (for example by the tax set-aside). Only
  * rows the app itself would have created qualify: never imported rows.
+ *
+ * v0.1 also left a negative starting balance (debt) uncategorized. From v0.2
+ * every starting balance uses INCOME, so starting debt reduces Ready to Assign
+ * directly instead of nagging as "uncategorized". Ready to Assign is the same
+ * either way.
  */
 export function migrateTransaction(t: Transaction): Transaction {
-  if (t.opening || t.importKey !== undefined) return t;
-  if (t.payee === "Starting balance" && t.memo === "") return { ...t, opening: true };
-  return t;
+  let next = t;
+  if (!next.opening && next.importKey === undefined && next.payee === "Starting balance" && next.memo === "") {
+    next = { ...next, opening: true };
+  }
+  if (next.opening && next.categoryId === null) next = { ...next, categoryId: INCOME };
+  return next;
 }

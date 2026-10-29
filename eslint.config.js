@@ -17,6 +17,10 @@ export default tseslint.config(
       // noUncheckedIndexedAccess is on, so regex groups and checked lookups
       // legitimately need `!`. Type strictness is enforced by tsc instead.
       "@typescript-eslint/no-non-null-assertion": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", ignoreRestSiblings: true },
+      ],
       "no-eval": "error",
       "no-implied-eval": "error",
       "no-restricted-syntax": [

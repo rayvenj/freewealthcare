@@ -52,6 +52,12 @@ describe("backup", () => {
     ["duplicate import key", (b: Budget) => (b.transactions[0]!.importKey = "k"), /duplicate import key/],
     ["duplicate assignment", (b: Budget) => b.assignments.push({ ...b.assignments[0]! }), /more than one assignment/],
     ["reserved income id", (b: Budget) => (b.categories[0]!.id = "income"), /reserved/],
+    ["reserved transfer id", (b: Budget) => (b.categories[0]!.id = "transfer"), /reserved/],
+    [
+      "half a transfer",
+      (b: Budget) => b.transactions.push({ id: "t9", accountId: "a1", date: "2026-10-03", payee: "x", memo: "", amount: -5, categoryId: "transfer", transferId: "nope" }),
+      /missing transaction/,
+    ],
   ])("rejects %s", (_name, corrupt, message) => {
     const bad = structuredClone(budget);
     corrupt(bad);
@@ -79,6 +85,16 @@ describe("backup", () => {
     b.categories[0]!.setAsideRate = 0;
     const result = parseBackup(toBackup(b));
     expect(result.ok && result.budget.categories[0]!.setAsideRate).toBe(0);
+  });
+
+  it("round-trips a transfer", () => {
+    const b = structuredClone(budget);
+    b.accounts.push({ id: "a2", name: "Visa", type: "credit", archived: false });
+    b.transactions.push(
+      { id: "x1", accountId: "a1", date: "2026-10-05", payee: "Pay Visa", memo: "", amount: -500, categoryId: "transfer", transferId: "x2" },
+      { id: "x2", accountId: "a2", date: "2026-10-05", payee: "Pay Visa", memo: "", amount: 500, categoryId: "transfer", transferId: "x1", generated: true },
+    );
+    expect(parseBackup(toBackup(b))).toEqual({ ok: true, budget: b });
   });
 
   it("keeps the starting-balance marker", () => {

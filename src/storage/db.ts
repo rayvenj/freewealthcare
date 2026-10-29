@@ -21,7 +21,7 @@ export type Db = IDBPDatabase<FwcSchema>;
 
 export const DB_NAME = "freewealthcare";
 /** Bump when stored records need migrating; see core/migrate.ts. */
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 export function openBudgetDb(name = DB_NAME): Promise<Db> {
   return openDB<FwcSchema>(name, DB_VERSION, {
@@ -115,6 +115,15 @@ export async function putCategories(db: Db, categories: Category[]): Promise<voi
 }
 export const putTransaction = (db: Db, t: Transaction) => db.put("transactions", t);
 export const deleteTransaction = (db: Db, id: string) => db.delete("transactions", id);
+
+/** Applies a set of transaction writes and deletes (e.g. both legs of a transfer) atomically. */
+export async function applyTransactionChanges(db: Db, changes: { put: Transaction[]; del: string[] }): Promise<void> {
+  const tx = db.transaction("transactions", "readwrite");
+  await inTx(tx, async () => {
+    for (const id of changes.del) await tx.store.delete(id);
+    for (const t of changes.put) await tx.store.put(t);
+  });
+}
 
 /** Sets (not adds to) the amount assigned to a category for a month. */
 export async function setAssignment(db: Db, a: Assignment): Promise<void> {

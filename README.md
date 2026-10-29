@@ -21,7 +21,9 @@ login, no tracking. Open it, budget, close it.
 2. **Assign** that money to categories for the month. Ready to Assign goes down.
 3. **Spend** from categories. A category's **Available** goes down.
 4. Whatever is left in a category **rolls into next month**. Overspending rolls too: it is never silently forgiven.
-5. The books always balance: `Ready to Assign + sum of every category's Available = total cash across accounts`. There is a test that enforces this.
+5. **Transfers** between your accounts (moving money to savings, paying a credit card) are not income or spending. They change account balances, never the budget.
+6. **Credit cards** work like cash. Pick a category when you buy something on the card and that category pays for it. Paying the card later is a transfer. Debt you already owed when you added the card comes out of Ready to Assign.
+7. The books always balance: `Ready to Assign + sum of every category's Available = net worth` (cash minus card debt). There is a test that enforces this.
 
 ## Getting started
 

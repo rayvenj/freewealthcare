@@ -2,7 +2,8 @@ import { z } from "zod";
 import { isValidIsoDate } from "./dates";
 import { migrateTransaction } from "./migrate";
 import { MAX_SET_ASIDE_RATE } from "./templates";
-import { INCOME, type Budget, type Category, type Transaction } from "./types";
+import { transferProblem } from "./transfers";
+import { INCOME, TRANSFER, type Budget, type Category, type Transaction } from "./types";
 
 // A backup file is untrusted input: it may have been edited, corrupted, or
 // handed to the user by someone else. Every field is validated and bounded
@@ -49,6 +50,8 @@ const budgetSchema = z.object({
         categoryId: id.nullable(),
         importKey: text(400).optional(),
         opening: z.literal(true).optional(),
+        transferId: id.optional(),
+        generated: z.literal(true).optional(),
       }),
     )
     .max(200_000),
@@ -102,10 +105,12 @@ export function parseBackup(json: string): ParseBackupResult {
         if (setAsideRate !== undefined) out.setAsideRate = setAsideRate;
         return out;
       }),
-      transactions: data.transactions.map(({ importKey, opening, ...t }) => {
+      transactions: data.transactions.map(({ importKey, opening, transferId, generated, ...t }) => {
         const out: Transaction = { ...t };
         if (importKey !== undefined) out.importKey = importKey;
         if (opening) out.opening = true;
+        if (transferId !== undefined) out.transferId = transferId;
+        if (generated) out.generated = true;
         return migrateTransaction(out);
       }),
     },
@@ -135,7 +140,9 @@ function findIntegrityProblem(data: z.infer<typeof budgetSchema>): string | null
   if (d) return `duplicate account id ${d}`;
   d = dupe(data.categories.map((c) => c.id));
   if (d) return `duplicate category id ${d}`;
-  if (categoryIds.has(INCOME)) return `"${INCOME}" is reserved and can't be a category id`;
+  for (const reserved of [INCOME, TRANSFER]) {
+    if (categoryIds.has(reserved)) return `"${reserved}" is reserved and can't be a category id`;
+  }
   d = dupe(data.transactions.map((t) => t.id));
   if (d) return `duplicate transaction id ${d}`;
   d = dupe(data.transactions.flatMap((t) => (t.importKey === undefined ? [] : [t.importKey])));
@@ -145,10 +152,12 @@ function findIntegrityProblem(data: z.infer<typeof budgetSchema>): string | null
 
   for (const t of data.transactions) {
     if (!accountIds.has(t.accountId)) return `transaction ${t.id} points to a missing account`;
-    if (t.categoryId !== null && t.categoryId !== INCOME && !categoryIds.has(t.categoryId)) {
+    if (t.categoryId !== null && t.categoryId !== INCOME && t.categoryId !== TRANSFER && !categoryIds.has(t.categoryId)) {
       return `transaction ${t.id} points to a missing category`;
     }
   }
+  const transfer = transferProblem(data.transactions as Transaction[]);
+  if (transfer) return transfer;
   for (const a of data.assignments) {
     if (!categoryIds.has(a.categoryId)) return `assignment for ${a.month} points to a missing category`;
   }

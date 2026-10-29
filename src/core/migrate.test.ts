@@ -23,4 +23,9 @@ describe("migrateTransaction", () => {
     const client = { ...base, payee: "Client A" };
     expect(migrateTransaction(client)).toBe(client);
   });
+
+  it("moves a v0.1 uncategorized starting debt to INCOME", () => {
+    const debt = { ...base, amount: -85000, categoryId: null };
+    expect(migrateTransaction(debt)).toEqual({ ...debt, categoryId: INCOME, opening: true });
+  });
 });
