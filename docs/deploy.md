@@ -69,4 +69,18 @@ curl -s https://freewealthcare.pages.dev/templates/1099-contractor.json | head -
 
 Cloudflare dashboard, then **Workers & Pages**, then the project, then
 **Deployments**. On the last good deployment, choose **Rollback to this
-deployment**. Nothing to migrate: all user data lives in each user's browser.
+deployment**.
+
+**Check the database version first.** User data lives in each person's
+browser (IndexedDB), and a browser that has opened a newer build has already
+upgraded its database. A build with a lower `DB_VERSION` (in
+`src/storage/db.ts`) cannot open it: the browser refuses with `VersionError`
+and the app shows "Could not open local storage" until a compatible build is
+back. The data is not lost, just unreachable.
+
+| Rolling back to a build with | Safe? |
+| --- | --- |
+| The same `DB_VERSION` | Yes |
+| A lower `DB_VERSION` | No. Fix forward instead: revert the bad change in a new commit and deploy that, keeping the current `DB_VERSION` |
+
+Never tell users to clear site data to recover. That deletes their budget.
