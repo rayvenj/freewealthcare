@@ -19,6 +19,11 @@ export interface Category {
   name: string;
   group: string;
   archived: boolean;
+  /**
+   * Suggested share of each month's income to set aside here, in basis points
+   * (2500 = 25%). Used for things like quarterly estimated taxes.
+   */
+  setAsideRate?: number;
 }
 
 /**

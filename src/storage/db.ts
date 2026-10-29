@@ -91,6 +91,14 @@ export async function createAccount(db: Db, account: Account, opening?: Transact
   });
 }
 export const putCategory = (db: Db, c: Category) => db.put("categories", c);
+
+/** Writes several categories in one transaction (used by templates): all land or none do. */
+export async function putCategories(db: Db, categories: Category[]): Promise<void> {
+  const tx = db.transaction("categories", "readwrite");
+  await inTx(tx, async () => {
+    for (const c of categories) await tx.store.put(c);
+  });
+}
 export const putTransaction = (db: Db, t: Transaction) => db.put("transactions", t);
 export const deleteTransaction = (db: Db, id: string) => db.delete("transactions", id);
 

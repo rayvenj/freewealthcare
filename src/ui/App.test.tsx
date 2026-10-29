@@ -44,3 +44,36 @@ describe("App", () => {
     expect(screen.getAllByText("Starting balance").length).toBeGreaterThan(0);
   });
 });
+
+describe("templates", () => {
+  it("applies the contractor template and suggests a tax set-aside from new income", async () => {
+    vi.stubGlobal("confirm", () => true);
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Templates & data" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add to my budget" }));
+    expect(await screen.findByText(/Applied "1099 Contractor Starter"/)).toBeTruthy();
+
+    // Re-applying changes nothing.
+    fireEvent.click(screen.getByRole("button", { name: "Add to my budget" }));
+    expect(await screen.findByText(/already in your budget/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Accounts" }));
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Business Checking" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add account" }));
+    await screen.findByText("Business Checking");
+
+    fireEvent.click(screen.getByRole("button", { name: "Transactions" }));
+    fireEvent.change(screen.getByLabelText("Payee"), { target: { value: "Client invoice" } });
+    fireEvent.click(screen.getByLabelText(/Money in/));
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "4,000" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Add$/ }));
+    await screen.findByText("Client invoice");
+
+    fireEvent.click(screen.getByRole("button", { name: "Budget" }));
+    expect(await screen.findByText("Quarterly Estimated Taxes")).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: "Assign $1,000.00" }));
+    expect(await screen.findByText("Covered")).toBeTruthy();
+    expect((screen.getByLabelText("Assigned to Quarterly Estimated Taxes") as HTMLInputElement).value).toBe("1000.00");
+  });
+});

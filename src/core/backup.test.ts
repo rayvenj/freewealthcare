@@ -58,6 +58,15 @@ describe("backup", () => {
     expect(parseBackup(toBackup(bad))).toMatchObject({ ok: false, error: expect.stringMatching(message) });
   });
 
+  it("keeps set-aside rates and rejects out-of-range ones", () => {
+    const b = structuredClone(budget);
+    b.categories[0]!.setAsideRate = 2500;
+    const result = parseBackup(toBackup(b));
+    expect(result.ok && result.budget.categories[0]!.setAsideRate).toBe(2500);
+    b.categories[0]!.setAsideRate = 10_000;
+    expect(parseBackup(toBackup(b))).toMatchObject({ ok: false });
+  });
+
   it("keeps the starting-balance marker", () => {
     const b = structuredClone(budget);
     b.transactions[1]!.opening = true;

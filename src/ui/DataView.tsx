@@ -3,6 +3,7 @@ import { parseBackup, toBackup } from "../core/backup";
 import { todayIso } from "../core/dates";
 import { replaceAll } from "../storage/db";
 import { useStore } from "./store";
+import { TemplatesCard } from "./TemplatesCard";
 
 const MAX_BACKUP_BYTES = 50 * 1024 * 1024;
 
@@ -36,7 +37,7 @@ export function DataView() {
 
   return (
     <section>
-      <h2>Your data</h2>
+      <h2>Templates &amp; data</h2>
       <div className="card">
         <h3>Where your data lives</h3>
         <p>
@@ -45,6 +46,7 @@ export function DataView() {
           regularly.
         </p>
       </div>
+      <TemplatesCard />
       <div className="card">
         <h3>Back up</h3>
         <button className="primary" onClick={exportBackup}>Download backup</button>

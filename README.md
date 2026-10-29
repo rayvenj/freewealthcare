@@ -11,7 +11,7 @@ login, no tracking. Open it, budget, close it.
 | Principle | What it means in practice |
 | --- | --- |
 | **Secure** | No backend to breach. The app makes no network requests, and a strict Content Security Policy blocks the usual ways code sends data out (fetch, XHR, WebSockets, beacons, form posts). It is defense in depth, not a guarantee: see [SECURITY.md](SECURITY.md). Every imported file is treated as hostile input. |
-| **Useful** | Zero-based budgeting: every dollar gets a job. Manual entry plus bank CSV import with duplicate protection. |
+| **Useful** | Zero-based budgeting: every dollar gets a job. Manual entry plus bank CSV import with duplicate protection. Start from a [template](docs/templates.md), like the 1099 Contractor Starter with a built-in tax set-aside. |
 | **Simple** | Four screens: Budget, Transactions, Accounts, Your data. Rules you can check with a pencil. |
 | **Powerful** | Exact integer-cent math, month-to-month rollover, full backup/restore. The engine is pure and tested, so new features build on solid ground. |
 
@@ -43,7 +43,8 @@ npm run dev      # http://localhost:5173
 
 ```
 src/
-  core/      Pure budgeting logic: money, dates, budget engine, CSV import, backup validation
+  core/      Pure budgeting logic: money, dates, budget engine, CSV import, backup and template validation
+  templates/ Built-in budget templates (JSON)
   storage/   IndexedDB persistence (on-device only)
   ui/        React screens
 docs/        Roadmap and the public build log

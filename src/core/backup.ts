@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isValidIsoDate } from "./dates";
-import { INCOME, type Budget, type Transaction } from "./types";
+import { MAX_SET_ASIDE_RATE } from "./templates";
+import { INCOME, type Budget, type Category, type Transaction } from "./types";
 
 // A backup file is untrusted input: it may have been edited, corrupted, or
 // handed to the user by someone else. Every field is validated and bounded
@@ -24,7 +25,15 @@ const budgetSchema = z.object({
     )
     .max(500),
   categories: z
-    .array(z.object({ id, name: text(100), group: text(100), archived: z.boolean() }))
+    .array(
+      z.object({
+        id,
+        name: text(100),
+        group: text(100),
+        archived: z.boolean(),
+        setAsideRate: z.number().int().min(1).max(MAX_SET_ASIDE_RATE).optional(),
+      }),
+    )
     .max(1000),
   transactions: z
     .array(
@@ -86,6 +95,11 @@ export function parseBackup(json: string): ParseBackupResult {
     ok: true,
     budget: {
       ...data,
+      categories: data.categories.map(({ setAsideRate, ...c }) => {
+        const out: Category = { ...c };
+        if (setAsideRate !== undefined) out.setAsideRate = setAsideRate;
+        return out;
+      }),
       transactions: data.transactions.map(({ importKey, opening, ...t }) => {
         const out: Transaction = { ...t };
         if (importKey !== undefined) out.importKey = importKey;
