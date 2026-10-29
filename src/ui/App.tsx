@@ -7,6 +7,10 @@ import { TransactionsView } from "./TransactionsView";
 import { AccountsView } from "./AccountsView";
 import { DataView } from "./DataView";
 
+// A plain outbound link only. No embeds or signup forms: the CSP forbids the app
+// from making network requests, and that promise matters more than conversion.
+export const NEWSLETTER_URL = "https://universalwealthcare.substack.com/";
+
 const TABS = ["Budget", "Transactions", "Accounts", "Your data"] as const;
 type Tab = (typeof TABS)[number];
 
@@ -83,7 +87,14 @@ export function App() {
         {tab === "Your data" && <DataView />}
       </main>
       <footer className="shell footer">
-        Your data is stored only in this browser. Nothing is sent anywhere.
+        <p>Your data is stored only in this browser. Nothing is sent anywhere.</p>
+        <p>
+          An educational tool, not financial, tax or investment advice. Built in public; follow along at{" "}
+          <a href={NEWSLETTER_URL} target="_blank" rel="noopener noreferrer">
+            Universal WealthCare
+          </a>
+          .
+        </p>
       </footer>
     </StoreContext.Provider>
   );

@@ -1,6 +1,7 @@
 # FreeWealthCare
 
-A private, local-first budgeting app, built in public.
+A private, local-first budgeting app for first-generation wealth builders,
+built in public.
 
 **Your money data never leaves your device.** No account, no server, no bank
 login, no tracking. Open it, budget, close it.
@@ -53,7 +54,9 @@ your money live in plain functions that are easy to read, test and audit.
 
 ## Build log
 
-We are building this in public. Progress, decisions and tradeoffs are written
+We are building this in public. Long-form write-ups, plus personal finance and
+tax education that pairs with the app, are published at
+[Universal WealthCare](https://universalwealthcare.substack.com/). Progress, decisions and tradeoffs are written
 up in [`docs/build-log/`](docs/build-log/). The plan is in
 [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
@@ -62,6 +65,11 @@ up in [`docs/build-log/`](docs/build-log/). The plan is in
 See [SECURITY.md](SECURITY.md) for the threat model and how to report a
 vulnerability.
 
+## Disclaimer
+
+FreeWealthCare is an educational budgeting tool. It is not financial, tax or
+investment advice, and using it does not create a client relationship.
+
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Built by [Rayven J. Moore, CPA](https://www.rayvenjmoore.com/).

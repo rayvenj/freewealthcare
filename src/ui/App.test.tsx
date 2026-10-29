@@ -15,4 +15,11 @@ describe("App", () => {
     expect(await screen.findByText("$1,500.00")).toBeTruthy();
     expect(screen.getByText("Ready to assign")).toBeTruthy();
   });
+
+  it("links to the newsletter without leaking the opener or referrer", async () => {
+    render(<App />);
+    const link = await screen.findByRole("link", { name: "Universal WealthCare" });
+    expect(link.getAttribute("href")).toBe("https://universalwealthcare.substack.com/");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+  });
 });

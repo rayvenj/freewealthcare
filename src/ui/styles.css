@@ -92,6 +92,8 @@ th[scope="row"] { font-weight: 500; }
 .accounts li span:first-child { flex: 1; }
 .networth { font-size: 18px; }
 .footer { color: var(--muted); font-size: 13px; padding: 32px 16px; }
+.footer p { margin: 0 0 6px; }
+.footer a { color: var(--brand); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (max-width: 520px) {
   th, td { padding: 8px 6px; }
