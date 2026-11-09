@@ -84,3 +84,16 @@ back. The data is not lost, just unreachable.
 | A lower `DB_VERSION` | No. Fix forward instead: revert the bad change in a new commit and deploy that, keeping the current `DB_VERSION` |
 
 Never tell users to clear site data to recover. That deletes their budget.
+
+## Search metadata and production origin
+
+The HTML shell includes a product description, social text, and a static
+introduction that React replaces on startup. It includes no user budget data,
+trackers, external embeds or new network calls. JavaScript is required to edit
+and store a budget; the introduction remains readable without it.
+
+A production origin has not been confirmed in this repository. The sample
+pages.dev addresses in these instructions are examples, not canonical URLs.
+Before adding a canonical link, og:url, social image URL or sitemap, confirm the
+public production HTTPS origin and whether subpath hosting is needed. Keep
+preview noindex headers and the existing CSP intact.
